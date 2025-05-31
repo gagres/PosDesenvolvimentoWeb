@@ -1,46 +1,19 @@
-import { promises } from 'fs'; 
-import path from 'path';
-import ProductList from '../entities/productList';
 import {Product, ProductCategory} from "skeleton/dist/types";
 import {ProductNotFoundException} from "../exceptions/ProductNotFoundException";
-
+import { Knex } from 'knex';
 export default class ProductRepository {
-    private readonly outputFolder: string;
-
-    constructor() {
-        this.outputFolder = path.resolve('..', 'output');
-    }
-
-    private async getNextAvailableId(): Promise<string> {
-        const allProducts = await this.getProducts();
-
-        return allProducts.length() > 0 ? (parseInt(allProducts.last().id) + 1).toString() : "1";
-    }
+    constructor(private db: Knex) {}
 
     async getProductById(id: string): Promise<Product> {
-        const allProducts = await this.getProducts();
-        const product = (await allProducts.filter((product) => (product.id === id))).first();
-
-        return product ? product : (() => {throw new ProductNotFoundException(id)})();
+        const product = await this.db<Product>('products').where('id', '=', id).first();
+        if (!product) {
+            throw new ProductNotFoundException(id);
+        }
+        return product;
     }
 
     async getProducts() {
-        const data = await promises.readFile(path.join(this.outputFolder, 'processedProducts.json'));
-        const productsAsJson = JSON.parse(data.toString());
-
-        const products = new ProductList();
-        for (const productData of productsAsJson) {
-            const product = new Product(
-                productData.id,
-                productData.name,
-                productData.description,
-                productData.price,
-                productData.category,
-                productData.pictureUrl
-            );
-            products.push(product);
-        }
-        return products;
+        return await this.db<Product>('products');
     }
 
     async createProduct(
@@ -49,34 +22,43 @@ export default class ProductRepository {
         price: number,
         category: ProductCategory,
         pictureUrl: string
-    ) {
-        const product = new Product(await this.getNextAvailableId(), name, description, price, category, pictureUrl);
+    ): Promise<Product> {
+        return this.db.transaction(async (trx) => {
+            try {
+                const [product] = await this.db<Product>('products').insert({
+                    name,
+                    description,
+                    price,
+                    category,
+                    pictureUrl
+                }).returning('id');
 
-        const allProducts = await this.getProducts();
-        allProducts.push(product);
-
-        await this.saveOnFile(allProducts);
-
-        return product;
+                return new Product(product.id, name, description, price, category, pictureUrl);
+            } catch (error) {
+                console.error('Error creating product:', error);
+                throw error;
+            }
+        });
     }
-
+    
     async updateProduct(product: Product) {
-        const allProducts = await this.getProducts();
-        allProducts.replace(product);
+        return this.db.transaction(async (trx) => {
+            try {
+                await this.db<Product>('products')
+                    .where({ id: product.id })
+                    .update(product)
+                    .returning('id');
 
-        await this.saveOnFile(allProducts);
-
-        return product;
+                return product;
+            } catch (error) {
+                console.error('Error updating product:', error);
+                throw error;
+            }
+        });
     }
 
     async deleteProduct(id: string) {
-        const allProducts = await this.getProducts();
-        allProducts.forget(id);
-        await this.saveOnFile(allProducts);
-    }
-
-    private async saveOnFile(products: ProductList) {
-        const data = JSON.stringify(products.toArray());
-        await promises.writeFile(path.join(this.outputFolder, 'processedProducts.json'), data);
+        const [product] = await this.db<Product>('products').where('id', '=', id).delete().returning('id');
+        console.log(`Product with ID ${product.id} deleted successfully.`);
     }
 }

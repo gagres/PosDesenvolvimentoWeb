@@ -6,8 +6,10 @@ import {UploadService} from "../services/uploadService";
 import {FileNotFoundException} from "../exceptions/FileNotFoundException";
 import {productSchema} from "../schemas/product";
 
+import db from '../../db';
+
 const uploadService = new UploadService();
-const productRepository = new ProductRepository();
+const productRepository = new ProductRepository(db);
 
 const routes = (fastify: FastifyInstance) => {
     fastify.addHook('onRequest', (request, reply, done) => {
@@ -28,8 +30,7 @@ const routes = (fastify: FastifyInstance) => {
     });
 
     fastify.get('/', async (request, reply) => {
-        const products = await productRepository.getProducts();
-        reply.send(products.toArray());
+        reply.send(await productRepository.getProducts());
     });
 
     fastify.get('/:id', async (request, reply) => {

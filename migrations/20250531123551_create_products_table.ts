@@ -4,7 +4,7 @@ import type { Knex } from "knex";
 export async function up(knex: Knex): Promise<void> {
     return knex.transaction(async (trx) => {
         return knex.schema.createTable("products", (table) => {
-            table.increments("id").primary();
+            table.increments("id");
             table.string("name").notNullable();
             table.text("description").notNullable();
             table.decimal("price", 10, 2).notNullable();
@@ -14,7 +14,6 @@ export async function up(knex: Knex): Promise<void> {
         });
     });
 }
-
 
 export async function down(knex: Knex): Promise<void> {
     return knex.schema.dropTableIfExists("products");
