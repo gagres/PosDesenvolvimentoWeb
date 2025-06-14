@@ -1,5 +1,13 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import jwt, { JwtPayload } from 'jsonwebtoken';
+declare module 'fastify' {
+    interface FastifyRequest {
+        user?: {
+            userId: string;
+            email: string;
+        };
+    }
+}
 
 export async function authMiddleware(request: FastifyRequest, reply: FastifyReply) {
     const authHeader = request.headers['authorization'];
