@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import InvalidTokenException from '../exceptions/InvalidTokenException';
 
 interface JwtPayload {
     userId: string;
@@ -32,5 +33,13 @@ export default class JwtService {
             this.secretKey,
             { expiresIn: '7d' },
         );
+    }
+
+    verifyToken(token: string): jwt.JwtPayload | null {
+        try {
+            return jwt.verify(token, this.secretKey) as jwt.JwtPayload;
+        } catch (error) {
+            throw new InvalidTokenException();
+        }
     }
 }

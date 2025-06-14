@@ -15,14 +15,16 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
 
     const token = authHeader.slice(7); // Remove 'Bearer '
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
 
-    request.user = {
-        userId: decoded.userId,
-        email: decoded.email,
-    };
- 
-    if (token !== 'your-secret-token') {
+        request.user = {
+            userId: decoded.userId,
+            email: decoded.email,
+        };
+
+        return;
+    } catch (error) {
         reply.code(401).send({ error: 'Invalid token' });
         return;
     }
