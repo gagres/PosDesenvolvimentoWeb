@@ -3,9 +3,10 @@ import jwt from 'jsonwebtoken';
 interface JwtPayload {
     userId: string;
     email: string;
+    password?: string; // Optional, used for login
 }
 
-class JwtService {
+export default class JwtService {
     private secretKey: string;
     private expiresIn: jwt.SignOptions['expiresIn'];
 
