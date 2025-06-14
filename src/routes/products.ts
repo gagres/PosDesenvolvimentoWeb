@@ -5,6 +5,7 @@ import {Product, ProductCategory} from "skeleton/dist/types";
 import {UploadService} from "../services/uploadService";
 import {FileNotFoundException} from "../exceptions/FileNotFoundException";
 import {productSchema} from "../schemas/product";
+import { authMiddleware } from "../middlewares/authMiddleware";
 
 import db from '../../db';
 
@@ -42,6 +43,7 @@ const routes = (fastify: FastifyInstance) => {
 
     fastify.post('/', {
         schema: productSchema,
+        preHandler: authMiddleware,
         handler: async (request, reply) => {
             const { name, description, price, category, pictureUrl } = request.body as {
                 name: string;
@@ -57,6 +59,7 @@ const routes = (fastify: FastifyInstance) => {
 
     fastify.put('/:id', {
         schema: productSchema,
+        preHandler: authMiddleware,
         handler: async (request, reply) => {
             const { id } = request.params as { id: string };
             const { name, description, price, category, pictureUrl } = request.body as {
@@ -71,10 +74,13 @@ const routes = (fastify: FastifyInstance) => {
         }
     });
 
-    fastify.delete('/:id', async (request, reply) => {
-        const { id } = request.params as { id: string };
-        await productRepository.deleteProduct(id);
-        reply.code(204).send();
+    fastify.delete('/:id', {
+        preHandler: authMiddleware,
+        handler: async (request, reply) => {
+            const { id } = request.params as { id: string };
+            await productRepository.deleteProduct(id);
+            reply.code(204).send();
+        }
     });
 
     fastify.get('/:id/image', async (request, reply) => {
